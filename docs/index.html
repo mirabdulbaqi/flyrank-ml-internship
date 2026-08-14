@@ -297,6 +297,16 @@ A conventional random split produced 86.51% accuracy, but the client-grouped
 generalization to clients not represented during training.
 </p>
 
+<h3>Model vs Week 4 Baseline</h3>
+
+<p>
+The client-grouped Random Forest substantially outperformed the transparent
+Week 4 baseline on the same held-out clients.
+</p>
+
+<img src="model_vs_baseline.png"
+     alt="Model versus Week 4 baseline accuracy comparison"
+     style="max-width: 800px; width: 100%; height: auto;">
 <h2>6. Interpretation</h2>
 
 <p>
@@ -305,7 +315,17 @@ contain useful information for distinguishing the defined decline outcome.
 Feature importance provides a descriptive view of which signals the model
 relied upon most strongly.
 </p>
+<h3>Feature Importance</h3>
 
+<p>
+The following chart provides a descriptive view of the relative feature
+importance used by the Random Forest. These values indicate predictive
+usefulness within this model and should not be interpreted as causal effects.
+</p>
+
+<img src="feature_importance.png"
+     alt="Feature importance chart for the Random Forest model"
+     style="max-width: 800px; width: 100%; height: auto;">
 <p>
 These importance values should not be interpreted as causal effects.
 Correlated features can share predictive information, and the analysis does
@@ -340,7 +360,17 @@ historical search-performance and query-mix signals before taking action.
     decline, guarantee that an editorial change will improve performance,
     or predict Google's ranking decisions.
 </div>
+<h3>Top 10 Content Recommendations</h3>
 
+<p>
+The chart below shows the top 10 public-safe recommendations ranked by
+predicted decline probability. These rankings are intended for human review
+and decision support.
+</p>
+
+<img src="recommendation_chart.png"
+     alt="Top 10 content recommendations ranked by predicted decline probability"
+     style="max-width: 900px; width: 100%; height: auto;">
 <h2>8. Reproducibility</h2>
 
 <p>
