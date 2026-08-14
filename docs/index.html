@@ -1,0 +1,388 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Search Impression Decline Prediction — FlyRank Capstone</title>
+
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.7;
+            max-width: 1000px;
+            margin: auto;
+            padding: 40px 20px;
+            color: #222;
+            background: #f7f9fc;
+        }
+
+        main {
+            background: white;
+            padding: 45px;
+            border-radius: 12px;
+        }
+
+        h1 {
+            font-size: 36px;
+            line-height: 1.2;
+        }
+
+        h2 {
+            margin-top: 45px;
+            border-bottom: 2px solid #eee;
+            padding-bottom: 8px;
+        }
+
+        h3 {
+            margin-top: 30px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+        }
+
+        th, td {
+            border: 1px solid #ddd;
+            padding: 10px;
+            text-align: left;
+        }
+
+        th {
+            background: #f0f3f7;
+        }
+
+        .result {
+            background: #eef6ff;
+            padding: 20px;
+            border-left: 5px solid #2563eb;
+            margin: 25px 0;
+        }
+
+        .note {
+            background: #fff8e6;
+            padding: 18px;
+            border-left: 5px solid #f59e0b;
+            margin: 25px 0;
+        }
+
+        .metric {
+            font-size: 28px;
+            font-weight: bold;
+        }
+
+        footer {
+            margin-top: 50px;
+            padding-top: 25px;
+            border-top: 1px solid #ddd;
+            color: #555;
+        }
+
+        a {
+            color: #2563eb;
+        }
+    </style>
+</head>
+
+<body>
+
+<main>
+
+<h1>Predicting Search Impression Decline for Content Review</h1>
+
+<p><strong>FlyRank ML Internship Capstone</strong></p>
+
+<p>
+This research studies whether historical search-performance and query-mix signals
+can help identify content items associated with declining search impressions.
+The goal is to provide a ranked decision-support queue for content review.
+</p>
+
+<div class="result">
+    <strong>Headline result:</strong><br>
+    The client-grouped Random Forest achieved
+    <span class="metric">83.82%</span> accuracy,
+    compared with <strong>60.85%</strong> for the transparent Week 4 baseline
+    on the same held-out clients.
+</div>
+
+<h2>0. Abstract</h2>
+
+<p>
+This project asks whether historical search-performance and query-mix signals
+can identify content items associated with declining search impressions.
+The analysis uses the FlyRank ML Internship Warehouse and constructs content-level
+features from historical search-performance and query-level data.
+A Random Forest classifier is compared with a transparent Week 4 baseline using
+a client-grouped validation design.
+On the held-out clients, the Random Forest achieved 83.82% accuracy and 0.839
+weighted F1 compared with 60.85% accuracy and 0.616 weighted F1 for the baseline.
+The resulting probabilities are used to rank content for human review and
+decision support rather than to make automatic editorial decisions.
+</p>
+
+<h2>1. Problem framing</h2>
+
+<p>
+The decision supported by this work is which content items should receive
+priority for editorial review when their search impressions show a decline.
+The unit of analysis is a content item for a client. The model produces a
+decline probability that can be converted into a ranked review queue.
+A human editor can then inspect the historical search and query signals before
+deciding whether further investigation or content work is appropriate.
+</p>
+
+<p>
+A wrong positive recommendation may cause an editor to spend time reviewing
+content that does not require attention. A wrong negative recommendation may
+cause genuinely declining content to be missed. ML is useful because multiple
+historical signals can be combined into a single prioritization score rather
+than relying only on one hand-written threshold.
+</p>
+
+<h2>2. Data safety</h2>
+
+<p>
+This project uses the FlyRank ML Internship Warehouse release hosted on
+Hugging Face. The analysis uses daily content-performance data and query-level
+aggregates. The main modeling frame is built from historical 30-day and
+previous-30-day windows.
+</p>
+
+<p>
+The predictive features are:
+</p>
+
+<ul>
+    <li><code>imp_prev30</code></li>
+    <li><code>clk_last30</code></li>
+    <li><code>pos_last30</code></li>
+    <li><code>visible_queries</code></li>
+    <li><code>rare_share</code></li>
+    <li><code>anon_share</code></li>
+    <li><code>top_query_share</code></li>
+    <li><code>ctr_last30</code></li>
+</ul>
+
+<p>
+The target is defined using the relationship between last-30-day and
+previous-30-day impressions. Outcome-derived fields are excluded from the
+feature matrix to reduce leakage risk.
+</p>
+
+<p>
+Pseudonymous identifiers are not used as predictive features.
+<code>client_hash_id</code> is used only for client-grouped validation.
+No client names, domains, private queries, credentials, or other identifying
+information are included in the public analysis.
+</p>
+
+<h2>3. Baseline</h2>
+
+<p>
+The Week 4 baseline is a transparent rule combining recent average position
+and CTR into a single score:
+</p>
+
+<p>
+<strong>baseline_score = (pos_last30 / 10) + ((1 - ctr_last30) × 5)</strong>
+</p>
+
+<p>
+The baseline provides a simple and interpretable benchmark for evaluating
+whether the machine-learning model adds useful predictive signal.
+</p>
+
+<table>
+    <tr>
+        <th>Metric</th>
+        <th>Week 4 Baseline</th>
+    </tr>
+    <tr>
+        <td>Accuracy</td>
+        <td>60.85%</td>
+    </tr>
+    <tr>
+        <td>Macro F1</td>
+        <td>0.617</td>
+    </tr>
+    <tr>
+        <td>Weighted F1</td>
+        <td>0.616</td>
+    </tr>
+</table>
+
+<h2>4. Model / analysis</h2>
+
+<p>
+The final model is a Random Forest classifier. It uses eight historical
+search-performance and query-mix features. The model contains 300 trees,
+maximum depth 15, minimum samples per leaf 5, balanced class weights,
+and random seed 42.
+</p>
+
+<p>
+The target is <code>is_declining</code>, defined as an item whose
+last-30-day impressions are below 80% of its previous-30-day impressions.
+</p>
+
+<p>
+The model intentionally excludes <code>imp_last30</code> and other
+outcome-derived fields because they would expose information used to construct
+the target.
+</p>
+
+<h2>5. Evaluation</h2>
+
+<p>
+The final evaluation uses a client-grouped train/test split. The training set
+contained 71,805 rows from 35 clients, while the test set contained 29,815
+rows from 12 held-out clients.
+</p>
+
+<table>
+    <tr>
+        <th>Method</th>
+        <th>Accuracy</th>
+        <th>Macro F1</th>
+        <th>Weighted F1</th>
+    </tr>
+    <tr>
+        <td>Week 4 Baseline</td>
+        <td>60.85%</td>
+        <td>0.617</td>
+        <td>0.616</td>
+    </tr>
+    <tr>
+        <td><strong>Random Forest</strong></td>
+        <td><strong>83.82%</strong></td>
+        <td><strong>0.826</strong></td>
+        <td><strong>0.839</strong></td>
+    </tr>
+</table>
+
+<div class="result">
+    The Random Forest improved accuracy by approximately
+    <strong>23 percentage points</strong> over the Week 4 baseline
+    on the same held-out clients.
+</div>
+
+<p>
+The Random Forest confusion matrix was:
+</p>
+
+<table>
+    <tr>
+        <th></th>
+        <th>Predicted 0</th>
+        <th>Predicted 1</th>
+    </tr>
+    <tr>
+        <th>Actual 0</th>
+        <td>8,602</td>
+        <td>2,247</td>
+    </tr>
+    <tr>
+        <th>Actual 1</th>
+        <td>2,576</td>
+        <td>16,390</td>
+    </tr>
+</table>
+
+<p>
+A conventional random split produced 86.51% accuracy, but the client-grouped
+83.82% result is treated as the primary validation result because it tests
+generalization to clients not represented during training.
+</p>
+
+<h2>6. Interpretation</h2>
+
+<p>
+The model indicates that historical search-performance and query-mix signals
+contain useful information for distinguishing the defined decline outcome.
+Feature importance provides a descriptive view of which signals the model
+relied upon most strongly.
+</p>
+
+<p>
+These importance values should not be interpreted as causal effects.
+Correlated features can share predictive information, and the analysis does
+not establish why a content item declined.
+</p>
+
+<p>
+The decrease from 86.51% on the conventional random split to 83.82% on the
+client-grouped split is expected because the grouped evaluation is more
+demanding. The remaining performance suggests that useful patterns are not
+limited entirely to individual rows from the same clients.
+</p>
+
+<h2>7. Recommendation</h2>
+
+<p>
+The model output can be used as a ranked decision-support queue for content
+review. Editors can begin with high-probability items and inspect their
+historical search-performance and query-mix signals before taking action.
+</p>
+
+<ol>
+    <li>Prioritize content with high predicted decline probability.</li>
+    <li>Inspect historical impressions, clicks, CTR, and position.</li>
+    <li>Inspect query coverage and concentration.</li>
+    <li>Review before making editorial changes.</li>
+    <li>Monitor future performance separately after any intervention.</li>
+</ol>
+
+<div class="note">
+    The model is a decision-support tool. It does not prove the cause of a
+    decline, guarantee that an editorial change will improve performance,
+    or predict Google's ranking decisions.
+</div>
+
+<h2>8. Reproducibility</h2>
+
+<p>
+The analysis is implemented in the capstone notebook:
+<code>work/notebooks/capstone.ipynb</code>.
+The workflow uses DuckDB for warehouse aggregation and scikit-learn for
+modeling and evaluation.
+</p>
+
+<p>
+The final Random Forest uses 300 estimators, maximum depth 15,
+minimum samples per leaf 5, balanced class weights, and random seed 42.
+The client-grouped validation also uses random seed 42.
+</p>
+
+<p>
+Credentials are not stored in the repository. A Hugging Face read token is
+provided through the secure runtime environment when access to the warehouse
+is required.
+</p>
+
+<h2>9. Acknowledgments &amp; data credit</h2>
+
+<p>
+Built on the
+<a href="https://flyrank.ai">FlyRank ML Internship dataset</a>.
+</p>
+
+<p>
+This project was completed as part of the FlyRank ML Internship.
+The analysis and conclusions are my own and should be interpreted as
+decision-support research rather than claims about Google's ranking algorithm
+or causal search-engine behavior.
+</p>
+
+<footer>
+    <p>
+        Capstone research project — FlyRank ML Internship
+    </p>
+</footer>
+
+</main>
+
+</body>
+</html>
